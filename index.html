@@ -523,7 +523,7 @@
 
       <div class="input-group">
         <div class="input-row">
-          <span class="input-value" id="transportDisplay">$400</span>
+          <span class="input-value" id="transportDisplay">$560</span>
           <div class="slider-block">
             <div class="slider-label">Group transportation cost (school bus)</div>
             <div class="slider-sublabel">$55/hr &nbsp; $125/hr</div>
@@ -581,7 +581,7 @@
         </div>
         <div class="savings-card">
           <div class="label">You Save</div>
-          <div class="value" id="saveBudget">$220</div>
+          <div class="value" id="saveBudget">$380</div>
           <div class="desc">School budget</div>
         </div>
       </div>
@@ -667,6 +667,7 @@
     worktourLessonSelectionTime: 0.25,
     worktourLessonCompletionTime: 0.5,
     worktourCostPerStudent: 6.00,
+    minBusHours: 7,  // minimum bus booking hours
   };
 
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMNqWXhOk3L3TtAQeka3Fvsiy2wajU91RwsUCtet_CaHegqjmnh-fOmNhNfmW34Tcy/exec';
@@ -731,16 +732,16 @@
   function updateDisplay(key) {
     const s = sliders[key];
     if (key === 'transport') {
-      // Display total transport cost = hourly rate × student class time
+      // Display total transport cost = hourly rate × max(student class time, minimum bus hours)
       const rate = parseFloat(sliders.transport.el.value);
-      const hours = parseFloat(sliders.studentTime.el.value);
+      const hours = Math.max(parseFloat(sliders.studentTime.el.value), CONFIG.minBusHours);
       s.display.textContent = `$${Math.round(rate * hours).toLocaleString()}`;
     } else {
       s.display.textContent = s.format(s.el.value);
       // If student time changed, also update transport display
       if (key === 'studentTime') {
         const rate = parseFloat(sliders.transport.el.value);
-        const hours = parseFloat(sliders.studentTime.el.value);
+        const hours = Math.max(parseFloat(sliders.studentTime.el.value), CONFIG.minBusHours);
         sliders.transport.display.textContent = `$${Math.round(rate * hours).toLocaleString()}`;
       }
     }
@@ -761,7 +762,7 @@
     const v = getValues();
     const teacherSaved = Math.max(0, v.teacherPrep - CONFIG.worktourLessonSelectionTime);
     const studentSaved = Math.max(0, v.studentTime - CONFIG.worktourLessonCompletionTime);
-    const transportCost = v.transport * v.studentTime; // transport is hourly rate × student hours
+    const transportCost = v.transport * Math.max(v.studentTime, CONFIG.minBusHours); // hourly rate × max(student hours, minimum bus hours)
     const fieldTripCost = transportCost + (v.admission * v.numStudents) + (v.lunch * v.numStudents);
     const worktourCost = CONFIG.worktourCostPerStudent * v.numStudents;
     const budgetSaved = Math.max(0, fieldTripCost - worktourCost);
@@ -802,7 +803,7 @@
     const payload = {
       firstName, lastName, email, consent: 'Yes',
       teacherPrep: inputs.teacherPrep, studentTime: inputs.studentTime,
-      numStudents: inputs.numStudents, transport: inputs.transport * inputs.studentTime,
+      numStudents: inputs.numStudents, transport: inputs.transport * Math.max(inputs.studentTime, CONFIG.minBusHours),
       admission: inputs.admission, lunch: inputs.lunch,
       teacherSaved: savings.teacherSaved, studentSaved: savings.studentSaved,
       budgetSaved: savings.budgetSaved,
@@ -874,7 +875,7 @@
       ['Teacher prep time', inputs.teacherPrep + ' hours'],
       ['Student class time', inputs.studentTime + ' hours'],
       ['Number of students', inputs.numStudents],
-      ['Group transportation', '$' + Math.round(inputs.transport * inputs.studentTime).toLocaleString()],
+      ['Group transportation', '$' + Math.round(inputs.transport * Math.max(inputs.studentTime, CONFIG.minBusHours)).toLocaleString()],
       ['Admission per student', '$' + inputs.admission],
       ['Lunch per student', '$' + inputs.lunch]
     ];
